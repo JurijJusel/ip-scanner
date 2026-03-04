@@ -2,26 +2,18 @@ import os
 from fastapi import APIRouter, HTTPException
 from models.virustotal_model import VirusTotalIP
 from services.service_virustotal import check_ip_virustotal
-from services.socket_domain_ip import domain_to_ip
-import ipaddress
+from utils.clean_domain_ip import domain_to_ip
 from config import VIRUSTOTAL_API_URL
+from utils.validators import is_valid_ip
 
 router = APIRouter()
-
-
-def is_ip(value: str) -> bool:
-    try:
-        ipaddress.ip_address(value)
-        return True
-    except ValueError:
-        return False
 
 
 @router.get("/virustotal/{ip_or_domain}", response_model=VirusTotalIP)
 async def get_virustotal(ip_or_domain: str):  # ← Tik ip_or_domain!
     api_key = os.getenv("VIRUSTOTAL_API")
 
-    if is_ip(ip_or_domain):
+    if is_valid_ip(ip_or_domain):
         ip = ip_or_domain
     else:
         ip = domain_to_ip(ip_or_domain)
