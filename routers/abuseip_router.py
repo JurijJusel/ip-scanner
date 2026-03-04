@@ -1,10 +1,10 @@
 import os
 from fastapi import APIRouter, HTTPException
-from models.virustotal_model import VirusTotalIP
-from services.service_virustotal import check_ip_virustotal
+from models.abuseip_model import AbuseModel
+from services.service_abuseip import get_info_from_ip, transform_to_abuse_model
 from services.socket_domain_ip import domain_to_ip
 import ipaddress
-from config import VIRUSTOTAL_API_URL
+from config import ABUSE_API_URL
 
 router = APIRouter()
 
@@ -16,10 +16,9 @@ def is_ip(value: str) -> bool:
     except ValueError:
         return False
 
-
-@router.get("/virustotal/{ip_or_domain}", response_model=VirusTotalIP)
-async def get_virustotal(ip_or_domain: str):  # ← Tik ip_or_domain!
-    api_key = os.getenv("VIRUSTOTAL_API")
+@router.get("/abuseipdb/{ip_or_domain}", response_model=AbuseModel)
+async def get_abuseipdb(ip_or_domain: str):
+    api_key = os.getenv("ABUSEIPDB_API")
 
     if is_ip(ip_or_domain):
         ip = ip_or_domain
@@ -28,9 +27,14 @@ async def get_virustotal(ip_or_domain: str):  # ← Tik ip_or_domain!
         if ip is None:
             raise HTTPException(status_code=400, detail=f"Could not resolve domain: {ip_or_domain}")
 
-    result = check_ip_virustotal(ip, api_key, VIRUSTOTAL_API_URL)
+    data = get_info_from_ip(ip, api_key, ABUSE_API_URL)
+
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"No data found for IP: {ip}")
+
+    result = transform_to_abuse_model(data)
 
     if result is None:
-        raise HTTPException(status_code=404, detail=f"No data found for IP: {ip}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse data for IP: {ip}")
 
     return result

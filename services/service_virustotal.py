@@ -1,27 +1,42 @@
 import requests
-from pathlib import Path
 from typing import Optional, List, Dict
 from models.virustotal_model import VirusTotalIP
 from rich import print
 
 
-def check_virustotal_key(api_key: str) -> bool:
-    """Validate VirusTotal API key by making a test request."""
+def check_virustotal_key(api_key: str, virustotal_api_url: str) -> bool:
+    """
+    Validate VirusTotal API key by making a test request.
+    Args:
+        api_key: VirusTotal API key
+        virustotal_api_url: Base URL for VirusTotal API
+    Returns:
+        bool: True if API key is valid, False otherwise
+    """
     try:
         if not api_key:
             print("VirusTotal API key not found in environment variables")
             return False
 
-        url = "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8"
+        # Build full URL with test IP
+        test_ip = "8.8.8.8"
+        url = f"{virustotal_api_url}{test_ip}"
+
         headers = {
             'x-apikey': api_key,
             'Accept': 'application/json',
         }
 
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url=url, headers=headers, timeout=10)
 
         if response.status_code == 401:
             print("VirusTotal API key is invalid or expired")
+            return False
+        elif response.status_code == 403:
+            print("VirusTotal API key does not have permission")
+            return False
+        elif response.status_code == 404:
+            print("VirusTotal API endpoint not found - check URL")
             return False
         elif response.status_code != 200:
             print(f"VirusTotal API returned status code: {response.status_code}")
@@ -29,14 +44,32 @@ def check_virustotal_key(api_key: str) -> bool:
 
         return True
 
-    except Exception as e:
+    except requests.exceptions.Timeout:
+        print("VirusTotal API request timed out")
+        return False
+
+    except requests.exceptions.RequestException as e:
         print(f"Failed to validate VirusTotal API: {e}")
         return False
 
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return False
 
-def check_ip_virustotal(ip: str, api_key: str) -> Optional[VirusTotalIP]:
-    """Check IP reputation via VirusTotal API v3."""
-    url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+
+def check_ip_virustotal(ip: str, api_key: str, base_api_url: str) -> Optional[VirusTotalIP]:
+    """
+    Check IP reputation via VirusTotal API v3.
+    Args:
+        ip: IP address to check
+        api_key: VirusTotal API key
+        base_url: Base URL (e.g., 'https://www.virustotal.com/api/v3/ip_addresses/')
+    Returns:
+        VirusTotalIP: Pydantic model with analysis results, or None if failed
+    """
+
+    url = f"{base_api_url}{ip}"
+
     headers = {
         "x-apikey": api_key,
         "Accept": "application/json"
@@ -53,7 +86,6 @@ def check_ip_virustotal(ip: str, api_key: str) -> Optional[VirusTotalIP]:
             print(f"[WARNING] No data returned for IP: {ip}")
             return None
 
-        # Paruošiam duomenis Pydantic modeliui
         vt_data = {
             'ip': ip,
             'reputation': attributes.get('reputation', 0),
@@ -73,44 +105,48 @@ def check_ip_virustotal(ip: str, api_key: str) -> Optional[VirusTotalIP]:
             'tags': attributes.get('tags', [])
         }
 
-        # Sukuriam Pydantic modelį
         return VirusTotalIP(**vt_data)
 
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f"[ERROR] IP not found in VirusTotal: {ip}")
+        else:
+            print(f"[ERROR] HTTP error for IP {ip}: {e}")
+        return None
+
+    except requests.exceptions.Timeout:
+        print(f"[ERROR] Timeout checking IP {ip}")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] Request failed for IP {ip}: {e}")
+        return None
+
     except Exception as e:
-        print(f"[ERROR] Failed to check IP {ip}: {e}")
+        print(f"[ERROR] Unexpected error checking IP {ip}: {e}")
         return None
 
 
-def get_virustotal_info_from_ips_list(ip_list: List[str], api_key: str) -> List[Dict]:
+def get_virustotal_info_from_ips_list(ip_list: List[str], api_key: str, base_api_url: str) -> List[Dict]:
     """
     Check multiple IP addresses using VirusTotal API.
     Args:
         ip_list: List of IP addresses to check
         api_key: API key for VirusTotal
+        base_url: Base URL for VirusTotal API
     Returns:
-        list: List of VirusTotalIP models converted to dictionaries
+        list: List of VirusTotal results as dictionaries
     """
+
     collected_data = []
 
     for ip_address in ip_list:
-        vt_result = check_ip_virustotal(ip_address, api_key)
+        vt_result = check_ip_virustotal(ip_address, api_key, base_api_url)
 
         if vt_result is None:
+            print(f"Skipping {ip_address} - no data retrieved")
             continue
 
         collected_data.append(vt_result.model_dump(exclude_none=True))
 
     return collected_data
-
-
-#if __name__ == "__main__":
-#    virustotal_api_key = os.getenv('VIRUSTOTAL_API')
-
-#    vt_api_key_check = check_virustotal_key(virustotal_api_key)
-    #domain_to_ip_results = [domain_to_ip(domain) for domain in domain_list]
-
-    #if vt_api_key_check:
-    #    results = get_virustotal_info_from_ips_list(domain_to_ip_results, virustotal_api_key)
-    #    print(results)
-    #else:
-    #    print("VirusTotal API key is not valid. Please check your '.env' file.")
