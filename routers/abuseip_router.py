@@ -9,9 +9,12 @@ from utils.validators import is_valid_ip
 router = APIRouter()
 
 
-@router.get("/abuseipdb/{ip_or_domain}", response_model=AbuseModel)
+@router.get("/abuseipdb/{ip_or_domain:path}", response_model=AbuseModel)
 async def get_abuseipdb(ip_or_domain: str):
     api_key = os.getenv("ABUSEIPDB_API")
+
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AbuseIPDB API key not configured")
 
     if is_valid_ip(ip_or_domain):
         ip = ip_or_domain

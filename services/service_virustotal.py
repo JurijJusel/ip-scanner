@@ -1,6 +1,7 @@
 import requests
 from typing import Optional, List, Dict
 from models.virustotal_model import VirusTotalIP
+from utils.http_helpers import handle_api_response
 from rich import print
 
 
@@ -28,18 +29,10 @@ def check_virustotal_key(api_key: str, virustotal_api_url: str) -> bool:
         }
 
         response = requests.get(url=url, headers=headers, timeout=10)
+        success, error_msg = handle_api_response(response, "VirusTotal")
 
-        if response.status_code == 401:
-            print("VirusTotal API key is invalid or expired")
-            return False
-        elif response.status_code == 403:
-            print("VirusTotal API key does not have permission")
-            return False
-        elif response.status_code == 404:
-            print("VirusTotal API endpoint not found - check URL")
-            return False
-        elif response.status_code != 200:
-            print(f"VirusTotal API returned status code: {response.status_code}")
+        if not success:
+            print(error_msg)
             return False
 
         return True

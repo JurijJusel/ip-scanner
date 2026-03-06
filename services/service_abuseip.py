@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import requests
 from models.abuseip_model import AbuseModel
+from utils.http_helpers import handle_api_response
 from rich import print
 
 
@@ -38,16 +39,11 @@ def check_abuseipdb_key(api_key, abuse_url):
 
         response = requests.get(url=abuse_url, headers=headers, params=querystring, timeout=10)
 
-        if response.status_code == 401:
-            print("AbuseIPDB API key is invalid or expired")
-            return False
 
-        elif response.status_code == 504:
-            print("AbuseIPDB API timeout - server not responding")
-            return False
+        success, error_msg = handle_api_response(response, "AbuseIPDB")
 
-        elif response.status_code != 200:
-            print(f"AbuseIPDB API returned status code: {response.status_code}")
+        if not success:
+            print(error_msg)
             return False
 
         return True

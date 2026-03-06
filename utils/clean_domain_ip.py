@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 import socket
 
 
@@ -13,32 +14,52 @@ def clean_domain(domain: str) -> str:
     """
     try:
         if domain is None:
-            print("Warning: Domain is None")
             return ""
 
         if not isinstance(domain, str):
-            print(f"Warning: Expected string, got {type(domain).__name__}")
             return ""
 
-        domain = domain.strip().lower()
+        decoded = unquote(domain)
+        if decoded != domain:
+            print(f"🔍 [1] UNQUOTE: '{domain}' → '{decoded}'")
+        else:
+            print(f"🔍 [1] UNQUOTE: No change for '{domain}'")
+
+
+        domain = decoded.strip().lower()
 
         if not domain:
             return ""
 
-        domain = domain.replace('http://', '').replace('https://', '')
+        # Remove protocols
+        original = domain
+        for protocol in ['https://', 'http://', 'ftp://', 'ftps://', 'ws://', 'wss://']:
+            if domain.startswith(protocol):
+                domain = domain[len(protocol):]
+                break
 
+        # Remove www.
         if domain.startswith('www.'):
+            original = domain
             domain = domain[4:]
 
+
+        # Remove path
         if '/' in domain:
+            original = domain
             domain = domain.split('/')[0]
 
+
+        # Remove trailing dots
         domain = domain.rstrip('.')
+
 
         return domain
 
     except Exception as e:
         print(f"❌ Unexpected error cleaning domain '{domain}': {e}")
+        import traceback
+        traceback.print_exc()
         return ""
 
 
@@ -69,13 +90,17 @@ def domain_to_ip(domain: str) -> str:
 
 
 if __name__ == "__main__":
-    domain = "https://www.skelbiu.lt/skelbimai"
-    ip = domain_to_ip(domain)
-    print(f"{domain} → {ip}")
+    test_domains = [
+        "https://www.google.com/",
+        "HTTP://WWW.GOOGLE.COM/",
+        "www.skelbiu.lt",
+        "google.com",
+        "WWW.SKELBIU.LT",
+        "https://skelbiu.lt/",
+        "http://www.skelbiu.lt",
+        ""
+    ]
 
-# https://www.skelbiu.lt/
-# "https://www.google.com/"
-# "https://www.example.com/path/to/page"
-# "youtube.com/watch?v=123"
-# "  WWW.SKELBIU.LT/skelbimai  "
-# "https://api.github.com/users"
+    for test in test_domains:
+        result = clean_domain(test)
+        print(f"'{test}' → '{result}'")

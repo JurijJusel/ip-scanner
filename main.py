@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from routers import virustotal_router, abuseip_router
 
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=Path(__file__).parent / '.env')
+load_dotenv()
 
 
 app = FastAPI()

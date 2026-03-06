@@ -48,7 +48,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 3. Install dependencies:
 ```bash
-pip install -e .
+uv add -r pyproject.toml
 ```
 
 4. Set up environment variables:
@@ -134,5 +134,3 @@ ip-scanner/
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
