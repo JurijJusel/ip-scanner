@@ -42,5 +42,4 @@ async def get_virustotal(ip_or_domain: str):
     if result is None:
         raise HTTPException(status_code=404, detail=f"No data found for IP: {ip}")
 
-    return result.model_dump(exclude_none=True)
-    #return result
+    return result
