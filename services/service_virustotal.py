@@ -1,5 +1,5 @@
 import requests
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 from models.virustotal_model import VirusTotalIP
 from utils.http_helpers import handle_api_response
 from rich import print
@@ -50,6 +50,39 @@ def check_virustotal_key(api_key: str, virustotal_api_url: str) -> bool:
         return False
 
 
+def parse_whois(raw_whois: Optional[str]) -> Dict[str, Any]:
+    """
+    Parse WHOIS string into structured dictionary.
+    Repeated keys are stored as lists.
+    """
+    if not raw_whois:
+        return {}
+
+    parsed: Dict[str, Any] = {}
+
+    for line in raw_whois.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        if ":" not in line:
+            parsed.setdefault("_unparsed", []).append(line)
+            continue
+
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if key in parsed:
+            if isinstance(parsed[key], list):
+                parsed[key].append(value)
+            else:
+                parsed[key] = [parsed[key], value]
+        else:
+            parsed[key] = value
+
+    return parsed
+
 def check_ip_virustotal(ip: str, api_key: str, base_api_url: str) -> Optional[VirusTotalIP]:
     """
     Check IP reputation via VirusTotal API v3.
@@ -90,7 +123,7 @@ def check_ip_virustotal(ip: str, api_key: str, base_api_url: str) -> Optional[Vi
             'asn': attributes.get('asn'),
             'as_owner': attributes.get('as_owner'),
             'regional_internet_registry': attributes.get('regional_internet_registry'),
-            'whois': attributes.get('whois'),
+            'whois':parse_whois(attributes.get('whois')),
             'whois_date': attributes.get('whois_date'),
             'last_analysis_date': attributes.get('last_analysis_date'),
             'last_modification_date': attributes.get('last_modification_date'),

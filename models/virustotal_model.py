@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 
 
 class TotalVotes(BaseModel):
@@ -67,7 +67,7 @@ class VirusTotalIP(BaseModel):
     regional_internet_registry: Optional[str] = Field(None, description="Regional Internet Registry")
 
     # WHOIS data
-    whois: Optional[str] = Field(None, description="Complete WHOIS information")
+    whois: Dict[str, Any] = {}
     whois_date: Optional[int] = Field(None, description="WHOIS timestamp (Unix epoch)")
 
     # Analysis metadata
