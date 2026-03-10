@@ -53,6 +53,7 @@ uv add -r pyproject.toml
 
 4. Set up environment variables:
 Create a `.env` file in the project root:
+
 ```env
 ABUSEIPDB_API=your_abuseipdb_api_key
 VIRUSTOTAL_API=your_virustotal_api_key
@@ -62,12 +63,19 @@ VIRUSTOTAL_API=your_virustotal_api_key
 
 ### Running the Application
 
+Locally (development):
+
 Start the FastAPI server:
 ```bash
 python main.py
 ```
+The server will start on `http://localhost:8000` (default local port)
 
-The server will start on `http://localhost:8000`
+⚠️ python main.py works locally only. Render uses its own start command:
+uvicorn main:app --host 0.0.0.0 --port $PORT
+Render automatically assigns a port via $PORT in the start command.
+The port=8000 in main.py is used for local development only.
+The if __name__ == "__main__" block is ignored by Render — it runs the start command from the dashboard instead.
 
 ### API Documentation
 
@@ -86,6 +94,68 @@ curl http://localhost:8000/abuseipdb/8.8.8.8
 ```bash
 curl http://localhost:8000/virustotal/google.com
 ```
+
+## Deployment on Render
+
+The live API is deployed at: **https://ip-scanner-qbr1.onrender.com**
+
+### How to Deploy on Render
+
+Runtime: Python
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+1. Push your code to **GitHub**
+2. Go to [render.com](https://render.com) and create a new **Web Service**
+
+3. Click Connect a repository → connect your GitHub account
+    Select your ip-scanner repository
+
+4. Configure the service:
+   - **Start Command**: python main.py
+
+5. Add **Environment Variables** in Render dashboard:
+   - `ABUSEIPDB_API` → your AbuseIPDB API key
+   - `VIRUSTOTAL_API` → your VirusTotal API key
+
+6. Click **Deploy**
+
+**Important**: The start command must use `--host 0.0.0.0` and `--port $PORT`.
+Without 0.0.0.0, Render cannot route external traffic to your app.
+
+### Why `0.0.0.0` is Required
+By default, uvicorn binds to localhost (127.0.0.1), which only accepts
+connections from the same machine. Cloud platforms like Render require 0.0.0.0
+to listen on all network interfaces so external traffic can reach your server.
+
+| Binding     | Accessible from           |
+|-------------|--------------------------|
+| `localhost` | Same machine only         |
+| `0.0.0.0`   | Everywhere (Render needs) |
+
+### Testing the Live API
+Once deployed, test your endpoints:
+
+Via Swagger UI (easiest)
+Visit `https://ip-scanner-qbr1.onrender.com/docs` — click "Try it out" on any endpoint, enter an IP or domain, and click Execute.
+
+Via Browser
+`https://ip-scanner-qbr1.onrender.com/abuseipdb/8.8.8.8`
+`https://ip-scanner-qbr1.onrender.com/virustotal/8.8.8.8`
+
+Via curl
+bashcurl `https://ip-scanner-qbr1.onrender.com/abuseipdb/8.8.8.8`
+curl `https://ip-scanner-qbr1.onrender.com/virustotal/google.com`
+
+*Check Your Own IP*
+
+Go to whatismyip.com to find your public IP
+
+Then check it:
+'https://ip-scanner-qbr1.onrender.com/abuseipdb/YOUR_IP_HERE'
+
+**Note**: Render free tier servers sleep after inactivity.
+The first request may take up to 30 seconds to wake up!!!
 
 ## Project Structure
 
