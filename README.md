@@ -2,6 +2,8 @@
 
 A FastAPI-based IP scanner that integrates with AbuseIPDB and VirusTotal
 to provide comprehensive IP address intelligence and threat analysis.
+Virustotal analyse suspicious files, domains, IPs and URLs to detect malware and other breaches, automatically share them with the security community.
+AbuseIPDB is a project dedicated to helping combat the spread of hackers, spammers, and abusive activity on the internet.
 
 ## Features
 
